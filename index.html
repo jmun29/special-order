@@ -704,7 +704,8 @@ var PRODUCTS = [
   { id: "T002", name: "Tortilla Fresca" },
   { id: "CA01", name: "Tostada Casera" },
   { id: "TR08", name: "Trigo #8" },
-  { id: "OTHER", name: "-- Otro / Other (ver Notas) --" }
+  { id: "OTHER_HB", name: "-- Otro Harina/Burrito (ver Notas) --" },
+  { id: "OTHER_TORT", name: "-- Otro Tortilla (ver Notas) --" }
 ];
 
 // ============================================================
@@ -966,7 +967,7 @@ function updateItemCount() {
 }
 
 function hasOther() {
-  return items.some(function(it) { return it.product === "OTHER"; });
+  return items.some(function(it) { return it.product === "OTHER_HB" || it.product === "OTHER_TORT"; });
 }
 
 function updateOtherHint() {
@@ -1051,6 +1052,20 @@ function handleSubmit() {
     }),
     timestamp: new Date().toISOString()
   };
+
+  // Detect product categories for text routing
+  var hasHarinaBurrito = false;
+  var hasTortilla = false;
+  var HB_IDS = ["HA45","HA55","HA06","HA12","BU10","BU12","BU13","BU3.5","BU14","BU16","BU08","OTHER_HB"];
+  orderData.items.forEach(function(it) {
+    if (HB_IDS.indexOf(it.product) >= 0) {
+      hasHarinaBurrito = true;
+    } else {
+      hasTortilla = true;
+    }
+  });
+  orderData.hasHarinaBurrito = hasHarinaBurrito;
+  orderData.hasTortilla = hasTortilla;
 
   lastSubmitted = orderData;
 
