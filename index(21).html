@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#FF6B35">
+<title>Pedido Especial</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0F1114;
+  --surface: #1A1D23;
+  --surface2: #22262E;
+  --border: #2E333D;
+  --text: #F0F0F2;
+  --text2: #9BA1AE;
+  --accent: #FF6B35;
+  --accent2: #FF8F5E;
+  --accentBg: rgba(255,107,53,0.1);
+  --green: #34D399;
+  --greenBg: rgba(52,211,153,0.08);
+  --yellow: #FBBF24;
+  --yellowBg: rgba(251,191,36,0.08);
+  --red: #F87171;
+  --radius: 14px;
+  --font: 'DM Sans', sans-serif;
+  --mono: 'Space Mono', monospace;
+}
+body, html { min-height: 100%; background: var(--bg); }
+.app-wrap {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 0 32px 0;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+  overflow-x: hidden;
+}
+.header {
+  background: linear-gradient(135deg, var(--accent) 0%, #e04e1a 100%);
+  padding: 20px 20px 24px 20px;
+  position: relative;
+  overflow: hidden;
+}
+.header::after {
+  content: '';
+  position: absolute;
+  top: -40%; right: -20%;
+  width: 200px; height: 200px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 50%;
+}
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
+}
+.lang-btn {
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: all 0.2s;
+}
+.lang-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.28); }
+.header h1 {
+  font-family: var(--mono);
+  font-size: 22px;
+  color: #fff;
+  letter-spacing: -0.5px;
+  position: relative;
+  z-index: 1;
+}
+.header p {
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+  margin-top: 2px;
+  position: relative;
+  z-index: 1;
+}
+.conn-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  position: relative;
+  z-index: 1;
+  margin-top: 8px;
+}
+.conn-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+}
+.conn-dot.online { background: var(--green); }
+.conn-dot.offline { background: var(--yellow); animation: pulse 1.5s infinite; }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.pending-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--yellowBg);
+  border: 1px solid rgba(251,191,36,0.2);
+  color: var(--yellow);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 20px;
+  position: relative;
+  z-index: 1;
+  margin-top: 10px;
+}
+.pending-dot {
+  width: 6px; height: 6px;
+  background: var(--yellow);
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+.form-section { padding: 20px; }
+.field { margin-bottom: 18px; }
+.field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 8px;
+}
+.field label .req { color: var(--accent); margin-left: 2px; }
+select, input, textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239BA1AE' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+}
+select:focus, input:focus, textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accentBg);
+}
+textarea { resize: vertical; min-height: 80px; }
+input[type="date"] { cursor: pointer; }
+input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
+input[type="number"] { font-variant-numeric: tabular-nums; }
+.items-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.items-header h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.item-count {
+  font-size: 12px;
+  color: var(--text2);
+  background: var(--surface2);
+  padding: 3px 10px;
+  border-radius: 10px;
+}
+.order-item {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  position: relative;
+  animation: slideIn 0.25s ease;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.order-item .item-num {
+  position: absolute;
+  top: 12px; left: 16px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--accent);
+  background: var(--accentBg);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.remove-btn {
+  position: absolute;
+  top: 10px; right: 12px;
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+.remove-btn:active { background: rgba(248,113,113,0.1); color: var(--red); }
+.item-row {
+  display: grid;
+  grid-template-columns: 1fr 100px;
+  gap: 10px;
+  margin-top: 28px;
+}
+.item-row select, .item-row input {
+  padding: 12px 14px;
+  font-size: 15px;
+}
+.item-row select { padding-right: 36px; }
+.item-col-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 5px;
+  display: block;
+}
+.qty-wrapper { position: relative; }
+.qty-wrapper input { width: 100%; }
+.add-item-btn {
+  width: 100%;
+  background: var(--surface);
+  border: 1.5px dashed var(--border);
+  color: var(--accent);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 4px;
+}
+.add-item-btn:active { background: var(--accentBg); border-color: var(--accent); }
+.submit-btn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent) 0%, #e04e1a 100%);
+  border: none;
+  color: #fff;
+  font-family: var(--font);
+  font-size: 17px;
+  font-weight: 700;
+  padding: 18px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  margin-top: 10px;
+  transition: all 0.2s;
+  box-shadow: 0 4px 20px rgba(255,107,53,0.3);
+  letter-spacing: 0.3px;
+}
+.submit-btn:active { transform: scale(0.98); box-shadow: 0 2px 10px rgba(255,107,53,0.2); }
+.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.error-msg {
+  background: rgba(248,113,113,0.08);
+  border: 1px solid rgba(248,113,113,0.2);
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+.other-hint {
+  background: var(--accentBg);
+  border: 1px solid rgba(255,107,53,0.25);
+  color: var(--accent2);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-top: 12px;
+  animation: slideIn 0.25s ease;
+}
+.notes-highlight textarea {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--accentBg) !important;
+}
+.success-screen, .offline-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  padding: 40px 24px;
+  text-align: center;
+  animation: fadeUp 0.4s ease;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.success-icon, .offline-icon {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+.success-icon { background: var(--greenBg); border: 2px solid rgba(52,211,153,0.2); }
+.offline-icon { background: var(--yellowBg); border: 2px solid rgba(251,191,36,0.2); }
+.success-icon svg, .offline-icon svg { width: 36px; height: 36px; }
+.success-screen h2 {
+  font-family: var(--mono);
+  font-size: 24px;
+  color: var(--green);
+  margin-bottom: 8px;
+}
+.offline-screen h2 {
+  font-family: var(--mono);
+  font-size: 20px;
+  color: var(--yellow);
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+.success-screen .sub, .offline-screen .sub {
+  font-size: 14px;
+  color: var(--text2);
+  line-height: 1.6;
+  max-width: 280px;
+  margin-bottom: 16px;
+}
+.order-id {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent);
+  background: var(--accentBg);
+  padding: 6px 16px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+.summary-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin: 16px 0 32px 0;
+  width: 100%;
+  max-width: 320px;
+  text-align: left;
+}
+.summary-card h4 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text2);
+  margin-bottom: 12px;
+}
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 14px;
+}
+.summary-row .label { color: var(--text2); }
+.summary-row .value { font-weight: 600; color: var(--text); }
+.summary-items {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 13px;
+}
+.summary-item .name { color: var(--text2); }
+.summary-item .qty { color: var(--accent); font-weight: 700; font-family: var(--mono); }
+.new-order-btn {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 16px 40px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.new-order-btn:active { background: var(--surface2); transform: scale(0.97); }
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 12px 20px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  z-index: 100;
+  animation: toastIn 0.3s ease;
+  max-width: 340px;
+  text-align: center;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+.hidden { display: none; }
+
+/* Status check styles */
+.status-btn {
+  width: 100%;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--text2);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  margin-top: 12px;
+  transition: all 0.2s;
+}
+.status-btn:active { background: var(--surface2); transform: scale(0.98); }
+.status-screen {
+  padding: 20px;
+  animation: fadeUp 0.4s ease;
+}
+.status-screen h2 {
+  font-family: var(--mono);
+  font-size: 18px;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+.status-back-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 0;
+  cursor: pointer;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.status-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  animation: slideIn 0.25s ease;
+}
+.status-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.status-card-id {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+}
+.status-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.status-badge.pending {
+  background: var(--yellowBg);
+  color: var(--yellow);
+  border: 1px solid rgba(251,191,36,0.2);
+}
+.status-badge.confirmed {
+  background: var(--greenBg);
+  color: var(--green);
+  border: 1px solid rgba(52,211,153,0.2);
+}
+.status-card-detail {
+  font-size: 13px;
+  color: var(--text2);
+  padding: 3px 0;
+}
+.status-card-detail strong { color: var(--text); }
+.status-loading {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text2);
+  font-size: 14px;
+}
+.status-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text2);
+  font-size: 14px;
+}
+.status-refresh-btn {
+  background: var(--accentBg);
+  border: 1px solid rgba(255,107,53,0.25);
+  color: var(--accent);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 16px;
+  transition: all 0.2s;
+}
+.status-refresh-btn:active { transform: scale(0.97); }
+</style>
+</head>
+<body>
+
+<div class="app-wrap" id="app">
+  <!-- Toast -->
+  <div class="toast hidden" id="toast"></div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <h1 id="headerTitle">Pedido Especial</h1>
+        <p id="headerSub">Solicitud a Produccion</p>
+      </div>
+      <button class="lang-btn" id="langBtn" onclick="toggleLang()">EN</button>
+    </div>
+    <div class="conn-status">
+      <span class="conn-dot" id="connDot"></span>
+      <span id="connText"></span>
+    </div>
+    <div class="pending-badge hidden" id="pendingBadge">
+      <span class="pending-dot"></span>
+      <span id="pendingText"></span>
+    </div>
+  </div>
+
+  <!-- FORM SCREEN -->
+  <div class="form-section" id="formScreen">
+    <div class="error-msg hidden" id="errorMsg"></div>
+
+    <div class="field">
+      <label id="labelRoute">Numero de Ruta <span class="req">*</span></label>
+      <select id="routeSelect"></select>
+    </div>
+
+    <div class="field">
+      <label id="labelDriver">Nombre del Chofer <span class="req">*</span></label>
+      <input type="text" id="driverInput" autocomplete="name">
+    </div>
+
+    <div class="field">
+      <label id="labelDate">Fecha de Entrega <span class="req">*</span></label>
+      <input type="date" id="dateInput">
+    </div>
+
+    <div class="items-header">
+      <h3 id="itemsTitle">Articulos del Pedido</h3>
+      <span class="item-count" id="itemCount"></span>
+    </div>
+
+    <div id="itemsContainer"></div>
+
+    <button class="add-item-btn" id="addItemBtn" onclick="addItem()"></button>
+
+    <div class="other-hint hidden" id="otherHint"></div>
+
+    <div class="field" id="notesField" style="margin-top:20px">
+      <label id="labelNotes">Notas / Instrucciones Especiales</label>
+      <textarea id="notesInput" rows="3"></textarea>
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="handleSubmit()"></button>
+    <button class="status-btn" id="statusBtn" onclick="showStatusScreen()"></button>
+  </div>
+
+  <!-- STATUS SCREEN -->
+  <div class="status-screen hidden" id="statusScreen">
+    <button class="status-back-btn" onclick="showScreen('form')">&#8592; <span id="statusBackText">Volver</span></button>
+    <h2 id="statusTitle">Mis Pedidos</h2>
+    <div id="statusContent"></div>
+    <div style="text-align:center">
+      <button class="status-refresh-btn" onclick="loadStatus()" id="statusRefreshBtn">Actualizar</button>
+    </div>
+  </div>
+
+  <!-- SUCCESS SCREEN -->
+  <div class="success-screen hidden" id="successScreen">
+    <div class="success-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+    </div>
+    <h2 id="successTitle"></h2>
+    <p class="sub" id="successMsg"></p>
+    <div class="order-id" id="successOrderId"></div>
+    <div class="summary-card" id="successSummary"></div>
+    <button class="new-order-btn" id="newOrderBtn" onclick="resetForm()"></button>
+  </div>
+
+  <!-- OFFLINE SCREEN -->
+  <div class="offline-screen hidden" id="offlineScreen">
+    <div class="offline-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55M5 12.55a10.94 10.94 0 015.17-2.39M10.71 5.05A16 16 0 0122.56 9M1.42 9a15.91 15.91 0 014.7-2.88M8.53 16.11a6 6 0 016.95 0M12 20h.01"/></svg>
+    </div>
+    <h2 id="offlineTitle"></h2>
+    <p class="sub" id="offlineMsg"></p>
+    <div class="order-id" id="offlineOrderId"></div>
+    <div class="summary-card" id="offlineSummary"></div>
+    <button class="new-order-btn" id="offlineNewBtn" onclick="resetForm()"></button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG - YOUR GOOGLE APPS SCRIPT URL
+// ============================================================
+var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwwUAiVi7xPUnulUERNCKp9LiaNioDtyjiQAMmuQtckPrn8XVPiG0hVeqrkMtpIdpea/exec";
+
+// ============================================================
+// PRODUCTS - To add/remove/edit products, just edit this list
+// ============================================================
+var PRODUCTS = [
+  { id: "B1", name: "Baby Amarilla" },
+  { id: "B2", name: "Baby Blanca" },
+  { id: "HA45", name: "Baby Harina #4.5" },
+  { id: "B4", name: "Baby Rest" },
+  { id: "B5", name: "Baby Rest Amarillo" },
+  { id: "BU10", name: "Burrito #1 (10in)" },
+  { id: "BU12", name: "Burrito #2 (12in)" },
+  { id: "BU13", name: "Burrito #3 (13in)" },
+  { id: "BU3.5", name: "Burrito #3.5 (13.5in)" },
+  { id: "BU14", name: "Burrito #4 (14in)" },
+  { id: "BU16", name: "Burrito #6 (16in)" },
+  { id: "BU08", name: "Burrito #8" },
+  { id: "CH01", name: "Chips Amarilla Bolsa" },
+  { id: "CH02", name: "Chips Bolsa" },
+  { id: "CH04", name: "Chips Cortada 4pc" },
+  { id: "CH06", name: "Chips Cortada 6 Piece" },
+  { id: "CH03", name: "Chips Cortada Amarilla" },
+  { id: "CH09", name: "Chips Cortada Blanca" },
+  { id: "CH07", name: "Chips Grueza" },
+  { id: "FA01", name: "Familiar Amarilla" },
+  { id: "FA04", name: "Familiar Blanca" },
+  { id: "HA55", name: "Harina #5.5" },
+  { id: "HA06", name: "Harina Especial (6in)" },
+  { id: "HA12", name: "Harina Regular 12oz" },
+  { id: "MAIZ", name: "Maiz Costal / Corn" },
+  { id: "MA01", name: "Maiz Especial Amarilla" },
+  { id: "MA11", name: "Maiz Especial Amarilla Bolsa" },
+  { id: "MA02", name: "Maiz Especial Taco Plastic" },
+  { id: "MA04", name: "Masa (Tamales/Tortillas)" },
+  { id: "MA05", name: "Masa (Tortillas)" },
+  { id: "MA07", name: "Masa Preparada (Dulce)" },
+  { id: "MA06", name: "Masa Preparada (Sal)" },
+  { id: "RA01", name: "Rancho 1 Dozena" },
+  { id: "RA02", name: "Rancho Plastico" },
+  { id: "T001", name: "Tortilla Caliente" },
+  { id: "T002", name: "Tortilla Fresca" },
+  { id: "CA01", name: "Tostada Casera" },
+  { id: "TR08", name: "Trigo #8" },
+  { id: "OTHER", name: "-- Otro / Other (ver Notas) --" }
+];
+
+// ============================================================
+// ROUTES - To add/remove routes, just edit this list
+// ============================================================
+var ROUTES = ["1","2","4","5","7","8","10","11","12","14","16","17","18","19","21","22","23","24","43"];
+
+// ============================================================
+// LANGUAGE
+// ============================================================
+var lang = "es";
+var LANG = {
+  en: {
+    title: "Special Order", subtitle: "Production Request",
+    route: "Route Number", routePlaceholder: "Select route...",
+    driver: "Driver Name", driverPlaceholder: "Enter your name",
+    date: "Delivery Date", product: "Product", productPlaceholder: "Select product...",
+    cases: "Cases", qty: "0",
+    notes: "Notes / Special Instructions", notesPlaceholder: "Optional comments...",
+    notesOtherPlaceholder: "Describe the product here...",
+    items: "Order Items", itemCount: "items",
+    addItem: "+ Add Another Product", removeItem: "Remove",
+    submit: "Submit Order", sending: "Sending...",
+    required: "Please fill all required fields",
+    success: "Order Submitted!",
+    successMsg: "Production has been notified. Your order has been logged.",
+    orderNum: "Order #", newOrder: "New Order",
+    offline: "No Connection - Order Queued",
+    offlineMsg: "Will send automatically when signal returns",
+    pending: "pending", langToggle: "ES",
+    otherHint: "You selected 'Other' - please describe the product in Notes below",
+    summary: "Order Summary", casesUnit: "cases",
+    connected: "Connected", disconnected: "Offline",
+    restored: "Connection restored! Sending queued orders...",
+    queueSent: "Queued orders sent successfully!",
+    checkStatus: "Check My Orders",
+    myOrders: "My Orders (Last 7 Days)",
+    back: "Back",
+    statusPending: "Pending",
+    statusConfirmed: "Confirmed",
+    statusLoading: "Loading orders...",
+    statusEmpty: "No orders found for this route",
+    statusRefresh: "Refresh",
+    statusSelectRoute: "Select a route first to check orders",
+    statusDelivery: "Delivery"
+  },
+  es: {
+    title: "Pedido Especial", subtitle: "Solicitud a Produccion",
+    route: "Numero de Ruta", routePlaceholder: "Seleccionar ruta...",
+    driver: "Nombre del Chofer", driverPlaceholder: "Ingrese su nombre",
+    date: "Fecha de Entrega", product: "Producto", productPlaceholder: "Seleccionar producto...",
+    cases: "Cajas", qty: "0",
+    notes: "Notas / Instrucciones Especiales", notesPlaceholder: "Comentarios opcionales...",
+    notesOtherPlaceholder: "Describe el producto aqui...",
+    items: "Articulos del Pedido", itemCount: "articulos",
+    addItem: "+ Agregar Otro Producto", removeItem: "Quitar",
+    submit: "Enviar Pedido", sending: "Enviando...",
+    required: "Complete todos los campos requeridos",
+    success: "Pedido Enviado!",
+    successMsg: "Produccion ha sido notificada. Su pedido fue registrado.",
+    orderNum: "Pedido #", newOrder: "Nuevo Pedido",
+    offline: "Sin Conexion - Pedido en Cola",
+    offlineMsg: "Se enviara automaticamente al recuperar senal",
+    pending: "pendientes", langToggle: "EN",
+    otherHint: "Seleccionaste 'Otro' - describe el producto en las Notas abajo",
+    summary: "Resumen del Pedido", casesUnit: "cajas",
+    connected: "Conectado", disconnected: "Sin conexion",
+    restored: "Conexion restaurada! Enviando pedidos en cola...",
+    queueSent: "Pedidos en cola enviados con exito!",
+    checkStatus: "Ver Mis Pedidos",
+    myOrders: "Mis Pedidos (Ultimos 7 Dias)",
+    back: "Volver",
+    statusPending: "Pendiente",
+    statusConfirmed: "Confirmado",
+    statusLoading: "Cargando pedidos...",
+    statusEmpty: "No se encontraron pedidos para esta ruta",
+    statusRefresh: "Actualizar",
+    statusSelectRoute: "Seleccione una ruta primero para ver pedidos",
+    statusDelivery: "Entrega"
+  }
+};
+
+function t(key) { return LANG[lang][key]; }
+
+// ============================================================
+// STATE
+// ============================================================
+var items = [{ product: "", qty: "" }];
+var queue = [];
+var isOnline = navigator.onLine;
+var submitting = false;
+var lastOrderId = "";
+var lastSubmitted = null;
+var toastTimer = null;
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener("load", function() {
+  buildRouteDropdown();
+  renderItems();
+  updateLangUI();
+  updateConnection();
+  setDefaultDate();
+});
+
+window.addEventListener("online", function() {
+  isOnline = true;
+  updateConnection();
+  if (queue.length > 0) {
+    showToast(t("restored"));
+    sendQueue();
+  }
+});
+
+window.addEventListener("offline", function() {
+  isOnline = false;
+  updateConnection();
+});
+
+// ============================================================
+// LANGUAGE TOGGLE
+// ============================================================
+function toggleLang() {
+  lang = lang === "en" ? "es" : "en";
+  updateLangUI();
+  renderItems();
+}
+
+function updateLangUI() {
+  document.getElementById("headerTitle").textContent = t("title");
+  document.getElementById("headerSub").textContent = t("subtitle");
+  document.getElementById("langBtn").textContent = t("langToggle");
+  document.getElementById("labelRoute").innerHTML = t("route") + ' <span class="req">*</span>';
+  document.getElementById("labelDriver").innerHTML = t("driver") + ' <span class="req">*</span>';
+  document.getElementById("labelDate").innerHTML = t("date") + ' <span class="req">*</span>';
+  document.getElementById("driverInput").placeholder = t("driverPlaceholder");
+  document.getElementById("itemsTitle").textContent = t("items");
+  document.getElementById("addItemBtn").textContent = t("addItem");
+  document.getElementById("submitBtn").textContent = t("submit");
+  document.getElementById("newOrderBtn").textContent = t("newOrder");
+  document.getElementById("offlineNewBtn").textContent = t("newOrder");
+  document.getElementById("successTitle").textContent = t("success");
+  document.getElementById("successMsg").textContent = t("successMsg");
+  document.getElementById("offlineTitle").textContent = t("offline");
+  document.getElementById("offlineMsg").textContent = t("offlineMsg");
+  document.getElementById("statusBtn").textContent = t("checkStatus");
+  document.getElementById("statusTitle").textContent = t("myOrders");
+  document.getElementById("statusBackText").textContent = t("back");
+  document.getElementById("statusRefreshBtn").textContent = t("statusRefresh");
+  updateNotesLabel();
+  updateConnection();
+  updatePending();
+  updateItemCount();
+}
+
+// ============================================================
+// CONNECTION
+// ============================================================
+function updateConnection() {
+  var dot = document.getElementById("connDot");
+  var txt = document.getElementById("connText");
+  dot.className = "conn-dot " + (isOnline ? "online" : "offline");
+  txt.textContent = isOnline ? t("connected") : t("disconnected");
+}
+
+function updatePending() {
+  var badge = document.getElementById("pendingBadge");
+  if (queue.length > 0) {
+    badge.classList.remove("hidden");
+    document.getElementById("pendingText").textContent = queue.length + " " + t("pending");
+  } else {
+    badge.classList.add("hidden");
+  }
+}
+
+// ============================================================
+// ROUTE DROPDOWN
+// ============================================================
+function buildRouteDropdown() {
+  var sel = document.getElementById("routeSelect");
+  sel.innerHTML = '<option value="" disabled selected>' + t("routePlaceholder") + '</option>';
+  ROUTES.forEach(function(r) {
+    var opt = document.createElement("option");
+    opt.value = r;
+    opt.textContent = r;
+    sel.appendChild(opt);
+  });
+}
+
+// ============================================================
+// DATE
+// ============================================================
+function setDefaultDate() {
+  var d = new Date();
+  d.setDate(d.getDate() + 1);
+  var iso = d.toISOString().split("T")[0];
+  document.getElementById("dateInput").value = iso;
+  document.getElementById("dateInput").min = iso;
+}
+
+// ============================================================
+// ORDER ITEMS
+// ============================================================
+function renderItems() {
+  var container = document.getElementById("itemsContainer");
+  container.innerHTML = "";
+  items.forEach(function(item, idx) {
+    var div = document.createElement("div");
+    div.className = "order-item";
+    var removeHtml = items.length > 1
+      ? '<button class="remove-btn" onclick="removeItem(' + idx + ')">' + t("removeItem") + ' &#10005;</button>'
+      : '';
+    var optionsHtml = '<option value="" disabled ' + (item.product === "" ? "selected" : "") + '>' + t("productPlaceholder") + '</option>';
+    PRODUCTS.forEach(function(p) {
+      optionsHtml += '<option value="' + p.id + '"' + (item.product === p.id ? ' selected' : '') + '>' + p.name + '</option>';
+    });
+    div.innerHTML =
+      '<span class="item-num">#' + (idx + 1) + '</span>' +
+      removeHtml +
+      '<div class="item-row">' +
+        '<div>' +
+          '<span class="item-col-label">' + t("product") + '</span>' +
+          '<select onchange="updateItem(' + idx + ',\'product\',this.value)">' + optionsHtml + '</select>' +
+        '</div>' +
+        '<div class="qty-wrapper">' +
+          '<span class="item-col-label">' + t("cases") + '</span>' +
+          '<input type="number" inputmode="numeric" pattern="[0-9]*" placeholder="' + t("qty") + '" value="' + (item.qty || '') + '" onchange="updateItem(' + idx + ',\'qty\',this.value)" oninput="updateItem(' + idx + ',\'qty\',this.value)" min="1" style="text-align:center">' +
+        '</div>' +
+      '</div>';
+    container.appendChild(div);
+  });
+  updateItemCount();
+  updateOtherHint();
+  updateNotesLabel();
+}
+
+function addItem() {
+  items.push({ product: "", qty: "" });
+  renderItems();
+}
+
+function removeItem(idx) {
+  if (items.length <= 1) return;
+  items.splice(idx, 1);
+  renderItems();
+}
+
+function updateItem(idx, field, val) {
+  items[idx][field] = val;
+  if (field === "product") {
+    updateOtherHint();
+    updateNotesLabel();
+  }
+}
+
+function updateItemCount() {
+  document.getElementById("itemCount").textContent = items.length + " " + t("itemCount");
+}
+
+function hasOther() {
+  return items.some(function(it) { return it.product === "OTHER"; });
+}
+
+function updateOtherHint() {
+  var hint = document.getElementById("otherHint");
+  if (hasOther()) {
+    hint.textContent = t("otherHint");
+    hint.classList.remove("hidden");
+  } else {
+    hint.classList.add("hidden");
+  }
+}
+
+function updateNotesLabel() {
+  var label = document.getElementById("labelNotes");
+  var field = document.getElementById("notesField");
+  var textarea = document.getElementById("notesInput");
+  if (hasOther()) {
+    label.innerHTML = t("notes") + ' <span class="req">*</span>';
+    field.className = "field notes-highlight";
+    textarea.placeholder = t("notesOtherPlaceholder");
+  } else {
+    label.innerHTML = t("notes");
+    field.className = "field";
+    textarea.placeholder = t("notesPlaceholder");
+  }
+}
+
+// ============================================================
+// SUBMIT
+// ============================================================
+function genOrderId() {
+  var d = new Date();
+  var mm = String(d.getMonth() + 1).padStart(2, "0");
+  var dd = String(d.getDate()).padStart(2, "0");
+  var rand = String(Math.floor(Math.random() * 9000) + 1000);
+  return "SO-" + mm + dd + "-" + rand;
+}
+
+function validate() {
+  var route = document.getElementById("routeSelect").value;
+  var driver = document.getElementById("driverInput").value.trim();
+  var date = document.getElementById("dateInput").value;
+  if (!route || !driver || !date) return false;
+  for (var i = 0; i < items.length; i++) {
+    if (!items[i].product || !items[i].qty || Number(items[i].qty) <= 0) return false;
+  }
+  if (hasOther() && !document.getElementById("notesInput").value.trim()) return false;
+  return true;
+}
+
+function handleSubmit() {
+  var errEl = document.getElementById("errorMsg");
+  errEl.classList.add("hidden");
+
+  if (!validate()) {
+    errEl.textContent = t("required");
+    errEl.classList.remove("hidden");
+    return;
+  }
+
+  if (submitting) return;
+  submitting = true;
+  document.getElementById("submitBtn").textContent = t("sending");
+  document.getElementById("submitBtn").disabled = true;
+
+  var oid = genOrderId();
+  lastOrderId = oid;
+
+  var orderData = {
+    orderId: oid,
+    route: document.getElementById("routeSelect").value,
+    driver: document.getElementById("driverInput").value.trim(),
+    date: document.getElementById("dateInput").value,
+    notes: document.getElementById("notesInput").value.trim(),
+    items: items.map(function(it) {
+      var prod = PRODUCTS.find(function(p) { return p.id === it.product; });
+      return {
+        product: it.product,
+        productName: prod ? prod.name : it.product,
+        qty: Number(it.qty)
+      };
+    }),
+    timestamp: new Date().toISOString()
+  };
+
+  lastSubmitted = orderData;
+
+  if (!isOnline) {
+    submitting = false;
+    queue.push(orderData);
+    updatePending();
+    showScreen("offline");
+    showOrderDetails("offline");
+    return;
+  }
+
+  fetch(SCRIPT_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify(orderData)
+  })
+  .then(function() {
+    submitting = false;
+    showScreen("success");
+    showOrderDetails("success");
+  })
+  .catch(function() {
+    submitting = false;
+    queue.push(orderData);
+    updatePending();
+    showScreen("offline");
+    showOrderDetails("offline");
+  });
+}
+
+// ============================================================
+// QUEUE
+// ============================================================
+function sendQueue() {
+  var promises = queue.map(function(orderData) {
+    return fetch(SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify(orderData)
+    }).catch(function() {});
+  });
+  Promise.all(promises).then(function() {
+    queue = [];
+    updatePending();
+    showToast(t("queueSent"));
+  });
+}
+
+// ============================================================
+// SCREENS
+// ============================================================
+function showScreen(name) {
+  document.getElementById("formScreen").classList.add("hidden");
+  document.getElementById("successScreen").classList.add("hidden");
+  document.getElementById("offlineScreen").classList.add("hidden");
+  document.getElementById("statusScreen").classList.add("hidden");
+
+  if (name === "form") {
+    document.getElementById("formScreen").classList.remove("hidden");
+  } else if (name === "success") {
+    document.getElementById("successScreen").classList.remove("hidden");
+  } else if (name === "offline") {
+    document.getElementById("offlineScreen").classList.remove("hidden");
+  } else if (name === "status") {
+    document.getElementById("statusScreen").classList.remove("hidden");
+  }
+}
+
+function showStatusScreen() {
+  var route = document.getElementById("routeSelect").value;
+  if (!route) {
+    var errEl = document.getElementById("errorMsg");
+    errEl.textContent = t("statusSelectRoute");
+    errEl.classList.remove("hidden");
+    setTimeout(function() { errEl.classList.add("hidden"); }, 3000);
+    return;
+  }
+  showScreen("status");
+  loadStatus();
+}
+
+function loadStatus() {
+  var route = document.getElementById("routeSelect").value;
+  var content = document.getElementById("statusContent");
+  content.innerHTML = '<div class="status-loading">' + t("statusLoading") + '</div>';
+
+  var url = SCRIPT_URL + "?route=" + encodeURIComponent(route);
+
+  fetch(url)
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (!data.orders || data.orders.length === 0) {
+        content.innerHTML = '<div class="status-empty">' + t("statusEmpty") + '</div>';
+        return;
+      }
+
+      // Sort newest first
+      data.orders.sort(function(a, b) {
+        return new Date(b.timestamp) - new Date(a.timestamp);
+      });
+
+      var html = "";
+      data.orders.forEach(function(order) {
+        var statusText = t("statusPending");
+        var statusClass = "pending";
+        var rawStatus = (order.status || "").toLowerCase().trim();
+        if (rawStatus === "confirmado" || rawStatus === "confirmed") {
+          statusText = t("statusConfirmed");
+          statusClass = "confirmed";
+        }
+
+        html +=
+          '<div class="status-card">' +
+            '<div class="status-card-header">' +
+              '<span class="status-card-id">' + order.orderId + '</span>' +
+              '<span class="status-badge ' + statusClass + '">' + statusText + '</span>' +
+            '</div>' +
+            '<div class="status-card-detail"><strong>' + t("driver") + ':</strong> ' + order.driver + '</div>' +
+            '<div class="status-card-detail"><strong>' + t("statusDelivery") + ':</strong> ' + order.date + '</div>' +
+            '<div class="status-card-detail"><strong>' + t("product") + ':</strong> ' + order.products + '</div>' +
+            '<div class="status-card-detail"><strong>' + t("cases") + ':</strong> ' + order.quantities + '</div>' +
+          '</div>';
+      });
+
+      content.innerHTML = html;
+    })
+    .catch(function() {
+      content.innerHTML = '<div class="status-empty">Error - ' + t("disconnected") + '</div>';
+    });
+}
+
+function showOrderDetails(screen) {
+  var prefix = screen === "success" ? "success" : "offline";
+  document.getElementById(prefix + "OrderId").textContent = t("orderNum") + lastOrderId;
+
+  var d = lastSubmitted;
+  var unit = t("casesUnit");
+  var html =
+    '<h4>' + t("summary") + '</h4>' +
+    '<div class="summary-row"><span class="label">' + t("route") + '</span><span class="value">' + d.route + '</span></div>' +
+    '<div class="summary-row"><span class="label">' + t("driver") + '</span><span class="value">' + d.driver + '</span></div>' +
+    '<div class="summary-row"><span class="label">' + t("date") + '</span><span class="value">' + d.date + '</span></div>';
+  if (d.notes) {
+    html += '<div class="summary-row"><span class="label">' + t("notes") + '</span><span class="value" style="font-size:12px;max-width:180px;text-align:right">' + d.notes + '</span></div>';
+  }
+  html += '<div class="summary-items">';
+  d.items.forEach(function(it) {
+    html += '<div class="summary-item"><span class="name">' + it.productName + '</span><span class="qty">&times;' + it.qty + ' ' + unit + '</span></div>';
+  });
+  html += '</div>';
+
+  document.getElementById(prefix + "Summary").innerHTML = html;
+}
+
+function resetForm() {
+  document.getElementById("routeSelect").selectedIndex = 0;
+  document.getElementById("driverInput").value = "";
+  document.getElementById("notesInput").value = "";
+  document.getElementById("errorMsg").classList.add("hidden");
+  setDefaultDate();
+  items = [{ product: "", qty: "" }];
+  renderItems();
+  submitting = false;
+  document.getElementById("submitBtn").textContent = t("submit");
+  document.getElementById("submitBtn").disabled = false;
+  showScreen("form");
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg) {
+  var el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.remove("hidden");
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() {
+    el.classList.add("hidden");
+  }, 3500);
+}
+</script>
+
+</body>
+</html>
