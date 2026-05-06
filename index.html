@@ -555,6 +555,31 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
   transition: all 0.2s;
 }
 .status-refresh-btn:active { transform: scale(0.97); }
+.confirm-btn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--green) 0%, #22b07a 100%);
+  border: none;
+  color: #fff;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: all 0.2s;
+}
+.confirm-btn:active { transform: scale(0.97); opacity: 0.8; }
+.confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.confirmed-label {
+  width: 100%;
+  text-align: center;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px;
+  margin-top: 10px;
+}
 </style>
 </head>
 <body>
@@ -619,6 +644,7 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
 
     <button class="submit-btn" id="submitBtn" onclick="handleSubmit()"></button>
     <button class="status-btn" id="statusBtn" onclick="showStatusScreen()"></button>
+    <button class="status-btn" id="managerBtn" style="border-color:var(--accent);color:var(--accent)" onclick="showManagerScreen()"></button>
   </div>
 
   <!-- STATUS SCREEN -->
@@ -628,6 +654,16 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
     <div id="statusContent"></div>
     <div style="text-align:center">
       <button class="status-refresh-btn" onclick="loadStatus()" id="statusRefreshBtn">Actualizar</button>
+    </div>
+  </div>
+
+  <!-- MANAGER CONFIRM SCREEN -->
+  <div class="status-screen hidden" id="managerScreen">
+    <button class="status-back-btn" onclick="showScreen('form')">&#8592; <span id="managerBackText">Volver</span></button>
+    <h2 id="managerTitle">Confirmar Pedidos</h2>
+    <div id="managerContent"></div>
+    <div style="text-align:center">
+      <button class="status-refresh-btn" onclick="loadPending()" id="managerRefreshBtn">Actualizar</button>
     </div>
   </div>
 
@@ -750,7 +786,15 @@ var LANG = {
     statusEmpty: "No orders found for this route",
     statusRefresh: "Refresh",
     statusSelectRoute: "Select a route first to check orders",
-    statusDelivery: "Delivery"
+    statusDelivery: "Delivery",
+    managerBtn: "Confirm Orders (Manager)",
+    managerTitle: "Confirm Orders",
+    managerLoading: "Loading pending orders...",
+    managerEmpty: "No pending orders!",
+    confirmBtn: "Confirm This Order",
+    confirming: "Confirming...",
+    confirmed: "Confirmed!",
+    managerRefresh: "Refresh"
   },
   es: {
     title: "Pedido Especial", subtitle: "Solicitud a Produccion",
@@ -784,7 +828,15 @@ var LANG = {
     statusEmpty: "No se encontraron pedidos para esta ruta",
     statusRefresh: "Actualizar",
     statusSelectRoute: "Seleccione una ruta primero para ver pedidos",
-    statusDelivery: "Entrega"
+    statusDelivery: "Entrega",
+    managerBtn: "Confirmar Pedidos (Manager)",
+    managerTitle: "Confirmar Pedidos",
+    managerLoading: "Cargando pedidos pendientes...",
+    managerEmpty: "No hay pedidos pendientes!",
+    confirmBtn: "Confirmar Este Pedido",
+    confirming: "Confirmando...",
+    confirmed: "Confirmado!",
+    managerRefresh: "Actualizar"
   }
 };
 
@@ -856,6 +908,10 @@ function updateLangUI() {
   document.getElementById("statusTitle").textContent = t("myOrders");
   document.getElementById("statusBackText").textContent = t("back");
   document.getElementById("statusRefreshBtn").textContent = t("statusRefresh");
+  document.getElementById("managerBtn").textContent = t("managerBtn");
+  document.getElementById("managerTitle").textContent = t("managerTitle");
+  document.getElementById("managerBackText").textContent = t("back");
+  document.getElementById("managerRefreshBtn").textContent = t("managerRefresh");
   updateNotesLabel();
   updateConnection();
   updatePending();
@@ -1125,6 +1181,7 @@ function showScreen(name) {
   document.getElementById("successScreen").classList.add("hidden");
   document.getElementById("offlineScreen").classList.add("hidden");
   document.getElementById("statusScreen").classList.add("hidden");
+  document.getElementById("managerScreen").classList.add("hidden");
 
   if (name === "form") {
     document.getElementById("formScreen").classList.remove("hidden");
@@ -1134,7 +1191,109 @@ function showScreen(name) {
     document.getElementById("offlineScreen").classList.remove("hidden");
   } else if (name === "status") {
     document.getElementById("statusScreen").classList.remove("hidden");
+  } else if (name === "manager") {
+    document.getElementById("managerScreen").classList.remove("hidden");
   }
+}
+
+function showManagerScreen() {
+  showScreen("manager");
+  loadPending();
+}
+
+function loadPending() {
+  var content = document.getElementById("managerContent");
+  content.innerHTML = '<div class="status-loading">' + t("managerLoading") + '</div>';
+
+  var url = SCRIPT_URL + "?pending=1";
+
+  fetch(url)
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (!data.orders || data.orders.length === 0) {
+        content.innerHTML = '<div class="status-empty">' + t("managerEmpty") + '</div>';
+        return;
+      }
+
+      // Sort newest first, show pending ones on top
+      data.orders.sort(function(a, b) {
+        var aP = (a.status || "").toLowerCase() === "pendiente" ? 0 : 1;
+        var bP = (b.status || "").toLowerCase() === "pendiente" ? 0 : 1;
+        if (aP !== bP) return aP - bP;
+        return new Date(b.timestamp) - new Date(a.timestamp);
+      });
+
+      var html = "";
+      data.orders.forEach(function(order) {
+        var statusText = t("statusPending");
+        var statusClass = "pending";
+        var isPending = true;
+        var rawStatus = (order.status || "").toLowerCase().trim();
+        if (rawStatus === "confirmado" || rawStatus === "confirmed") {
+          statusText = t("statusConfirmed");
+          statusClass = "confirmed";
+          isPending = false;
+        }
+
+        html +=
+          '<div class="status-card">' +
+            '<div class="status-card-header">' +
+              '<span class="status-card-id">' + order.orderId + '</span>' +
+              '<span class="status-badge ' + statusClass + '">' + statusText + '</span>' +
+            '</div>' +
+            '<div class="status-card-detail"><strong>R:' + order.route + '</strong> - ' + order.driver + '</div>' +
+            '<div class="status-card-detail"><strong>' + t("statusDelivery") + ':</strong> ' + order.date + '</div>' +
+            '<div class="status-card-detail"><strong>' + t("product") + ':</strong> ' + order.products + '</div>' +
+            '<div class="status-card-detail"><strong>' + t("cases") + ':</strong> ' + order.quantities + '</div>';
+
+        if (order.notes) {
+          html += '<div class="status-card-detail"><strong>Notas:</strong> ' + order.notes + '</div>';
+        }
+
+        if (isPending) {
+          html += '<button class="confirm-btn" id="cbtn-' + order.orderId + '" onclick="confirmOrder(\'' + order.orderId + '\')">' + t("confirmBtn") + '</button>';
+        } else {
+          html += '<div class="confirmed-label">' + t("confirmed") + '</div>';
+        }
+
+        html += '</div>';
+      });
+
+      content.innerHTML = html;
+    })
+    .catch(function() {
+      content.innerHTML = '<div class="status-empty">Error - ' + t("disconnected") + '</div>';
+    });
+}
+
+function confirmOrder(orderId) {
+  var btn = document.getElementById("cbtn-" + orderId);
+  if (btn) {
+    btn.textContent = t("confirming");
+    btn.disabled = true;
+  }
+
+  fetch(SCRIPT_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify({ action: "confirm", orderId: orderId })
+  })
+  .then(function() {
+    if (btn) {
+      btn.textContent = t("confirmed");
+      btn.style.background = "var(--greenBg)";
+      btn.style.color = "var(--green)";
+      btn.style.border = "1px solid rgba(52,211,153,0.2)";
+    }
+    showToast(t("confirmed") + " " + orderId);
+  })
+  .catch(function() {
+    if (btn) {
+      btn.textContent = "Error";
+      btn.disabled = false;
+    }
+  });
 }
 
 function showStatusScreen() {
