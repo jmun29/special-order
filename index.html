@@ -117,6 +117,96 @@ body, html { min-height: 100%; background: var(--bg); }
 }
 .conn-dot.online { background: var(--green); }
 .conn-dot.offline { background: var(--yellow); animation: pulse 1.5s infinite; }
+
+/* Header navigation links */
+.header-nav {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  position: relative;
+  z-index: 1;
+}
+.header-nav-link {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.85);
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.header-nav-link:active { background: rgba(255,255,255,0.25); }
+
+/* PIN overlay */
+.pin-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  animation: fadeUp 0.2s ease;
+}
+.pin-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px 24px;
+  max-width: 320px;
+  width: 90%;
+  text-align: center;
+}
+.pin-box h3 {
+  font-family: var(--mono);
+  font-size: 16px;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.pin-box p {
+  font-size: 13px;
+  color: var(--text2);
+  margin-bottom: 20px;
+}
+.pin-box input {
+  width: 100%;
+  text-align: center;
+  font-size: 24px;
+  letter-spacing: 8px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.pin-box .pin-btn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent) 0%, #e04e1a 100%);
+  border: none;
+  color: #fff;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+.pin-box .pin-cancel {
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-family: var(--font);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 8px;
+}
+.pin-error {
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
@@ -690,6 +780,10 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
       <span class="pending-dot"></span>
       <span id="pendingText"></span>
     </div>
+    <div class="header-nav">
+      <button class="header-nav-link" id="historyLink" onclick="showStatusScreen()">Historial</button>
+      <button class="header-nav-link" id="managerLink" onclick="showPinScreen()">Manager</button>
+    </div>
   </div>
 
   <!-- FORM SCREEN -->
@@ -728,8 +822,6 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
     </div>
 
     <button class="submit-btn" id="submitBtn" onclick="handleSubmit()"></button>
-    <button class="status-btn" id="statusBtn" onclick="showStatusScreen()"></button>
-    <button class="status-btn" id="managerBtn" style="border-color:var(--accent);color:var(--accent)" onclick="showManagerScreen()"></button>
   </div>
 
   <!-- STATUS SCREEN -->
@@ -785,6 +877,18 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
     <div class="summary-card" id="offlineSummary"></div>
     <button class="new-order-btn" id="offlineNewBtn" onclick="resetForm()"></button>
   </div>
+  <!-- PIN OVERLAY -->
+  <div class="pin-overlay hidden" id="pinOverlay">
+    <div class="pin-box">
+      <h3 id="pinTitle">Acceso Manager</h3>
+      <p id="pinSubtitle">Ingrese el PIN para continuar</p>
+      <div class="pin-error hidden" id="pinError"></div>
+      <input type="password" id="pinInput" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="----">
+      <button class="pin-btn" id="pinSubmitBtn" onclick="checkPin()">Entrar</button>
+      <button class="pin-cancel" id="pinCancelBtn" onclick="hidePinScreen()">Cancelar</button>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -792,6 +896,11 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
 // CONFIG - YOUR GOOGLE APPS SCRIPT URL
 // ============================================================
 var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwwUAiVi7xPUnulUERNCKp9LiaNioDtyjiQAMmuQtckPrn8XVPiG0hVeqrkMtpIdpea/exec";
+
+// ============================================================
+// MANAGER PIN - Change this to whatever 4-digit PIN you want
+// ============================================================
+var MANAGER_PIN = "1234";
 
 // ============================================================
 // PRODUCTS - To add/remove/edit products, just edit this list
@@ -872,8 +981,8 @@ var LANG = {
     connected: "Connected", disconnected: "Offline",
     restored: "Connection restored! Sending queued orders...",
     queueSent: "Queued orders sent successfully!",
-    checkStatus: "Check My Orders",
-    myOrders: "My Orders (Last 7 Days)",
+    checkStatus: "Order History",
+    myOrders: "Order History (Last 7 Days)",
     back: "Back",
     statusPending: "Pending",
     statusConfirmed: "Confirmed",
@@ -904,7 +1013,14 @@ var LANG = {
     statusRejected: "Rejected",
     statusRescheduled: "Rescheduled",
     rejectedLabel: "Rejected",
-    rescheduledLabel: "Rescheduled"
+    rescheduledLabel: "Rescheduled",
+    historyLink: "History",
+    managerLink: "Manager",
+    pinTitle: "Manager Access",
+    pinSubtitle: "Enter PIN to continue",
+    pinBtn: "Enter",
+    pinCancel: "Cancel",
+    pinError: "Incorrect PIN"
   },
   es: {
     title: "Pedido Especial", subtitle: "Solicitud a Produccion",
@@ -929,8 +1045,8 @@ var LANG = {
     connected: "Conectado", disconnected: "Sin conexion",
     restored: "Conexion restaurada! Enviando pedidos en cola...",
     queueSent: "Pedidos en cola enviados con exito!",
-    checkStatus: "Ver Mis Pedidos",
-    myOrders: "Mis Pedidos (Ultimos 7 Dias)",
+    checkStatus: "Historial de Pedidos",
+    myOrders: "Historial de Pedidos (Ultimos 7 Dias)",
     back: "Volver",
     statusPending: "Pendiente",
     statusConfirmed: "Confirmado",
@@ -961,7 +1077,14 @@ var LANG = {
     statusRejected: "Rechazado",
     statusRescheduled: "Reprogramado",
     rejectedLabel: "Rechazado",
-    rescheduledLabel: "Reprogramado"
+    rescheduledLabel: "Reprogramado",
+    historyLink: "Historial",
+    managerLink: "Manager",
+    pinTitle: "Acceso Manager",
+    pinSubtitle: "Ingrese el PIN para continuar",
+    pinBtn: "Entrar",
+    pinCancel: "Cancelar",
+    pinError: "PIN incorrecto"
   }
 };
 
@@ -987,6 +1110,9 @@ window.addEventListener("load", function() {
   updateLangUI();
   updateConnection();
   setDefaultDate();
+  document.getElementById("pinInput").addEventListener("keyup", function(e) {
+    if (e.key === "Enter") checkPin();
+  });
 });
 
 window.addEventListener("online", function() {
@@ -1029,11 +1155,9 @@ function updateLangUI() {
   document.getElementById("successMsg").textContent = t("successMsg");
   document.getElementById("offlineTitle").textContent = t("offline");
   document.getElementById("offlineMsg").textContent = t("offlineMsg");
-  document.getElementById("statusBtn").textContent = t("checkStatus");
   document.getElementById("statusTitle").textContent = t("myOrders");
   document.getElementById("statusBackText").textContent = t("back");
   document.getElementById("statusRefreshBtn").textContent = t("statusRefresh");
-  document.getElementById("managerBtn").textContent = t("managerBtn");
   document.getElementById("managerTitle").textContent = t("managerTitle");
   document.getElementById("managerBackText").textContent = t("back");
   document.getElementById("managerRefreshBtn").textContent = t("managerRefresh");
@@ -1042,6 +1166,12 @@ function updateLangUI() {
   document.getElementById("reviewConfirmBtn").textContent = t("reviewConfirm");
   document.getElementById("reviewEditBtn").textContent = t("reviewEdit");
   document.getElementById("reviewBackText").textContent = t("reviewBack");
+  document.getElementById("historyLink").textContent = t("historyLink");
+  document.getElementById("managerLink").textContent = t("managerLink");
+  document.getElementById("pinTitle").textContent = t("pinTitle");
+  document.getElementById("pinSubtitle").textContent = t("pinSubtitle");
+  document.getElementById("pinSubmitBtn").textContent = t("pinBtn");
+  document.getElementById("pinCancelBtn").textContent = t("pinCancel");
   updateNotesLabel();
   updateConnection();
   updatePending();
@@ -1571,6 +1701,32 @@ function rescheduleOrder(orderId) {
     showToast(t("statusRescheduled") + " " + orderId);
     setTimeout(function() { loadPending(); }, 1000);
   });
+}
+
+function showPinScreen() {
+  document.getElementById("pinOverlay").classList.remove("hidden");
+  document.getElementById("pinInput").value = "";
+  document.getElementById("pinError").classList.add("hidden");
+  document.getElementById("pinInput").focus();
+}
+
+function hidePinScreen() {
+  document.getElementById("pinOverlay").classList.add("hidden");
+  document.getElementById("pinInput").value = "";
+  document.getElementById("pinError").classList.add("hidden");
+}
+
+function checkPin() {
+  var pin = document.getElementById("pinInput").value;
+  if (pin === MANAGER_PIN) {
+    hidePinScreen();
+    showManagerScreen();
+  } else {
+    document.getElementById("pinError").textContent = t("pinError");
+    document.getElementById("pinError").classList.remove("hidden");
+    document.getElementById("pinInput").value = "";
+    document.getElementById("pinInput").focus();
+  }
 }
 
 function showStatusScreen() {
