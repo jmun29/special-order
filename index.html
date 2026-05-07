@@ -586,6 +586,85 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
   padding: 10px;
   margin-top: 10px;
 }
+.action-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+.action-btns .confirm-btn {
+  margin-top: 0;
+}
+.reject-btn {
+  width: 100%;
+  background: rgba(248,113,113,0.08);
+  border: 1px solid rgba(248,113,113,0.2);
+  color: var(--red);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.reject-btn:active { transform: scale(0.97); }
+.reschedule-btn {
+  width: 100%;
+  background: var(--yellowBg);
+  border: 1px solid rgba(251,191,36,0.2);
+  color: var(--yellow);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all 0.2s;
+}
+.reschedule-btn:active { transform: scale(0.97); }
+.status-badge.rejected {
+  background: rgba(248,113,113,0.08);
+  color: var(--red);
+  border: 1px solid rgba(248,113,113,0.2);
+}
+.status-badge.rescheduled {
+  background: var(--yellowBg);
+  color: var(--yellow);
+  border: 1px solid rgba(251,191,36,0.2);
+}
+.status-reason {
+  font-size: 12px;
+  color: var(--text2);
+  font-style: italic;
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: var(--surface2);
+  border-radius: 8px;
+}
+.reschedule-input {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.reschedule-input input {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+.reschedule-input button {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  background: var(--yellow);
+  color: #000;
+  font-weight: 700;
+  font-family: var(--font);
+  font-size: 13px;
+  cursor: pointer;
+}
 </style>
 </head>
 <body>
@@ -815,7 +894,17 @@ var LANG = {
     reviewSubtitle: "Review your order before sending",
     reviewConfirm: "Confirm & Send Order",
     reviewEdit: "Go Back & Edit",
-    reviewBack: "Edit"
+    reviewBack: "Edit",
+    rejectBtn: "Reject",
+    rescheduleBtn: "Reschedule",
+    rejectReason: "Reason for rejection:",
+    rejectConfirm: "Confirm Rejection",
+    rescheduleDate: "New date:",
+    rescheduleConfirm: "Confirm",
+    statusRejected: "Rejected",
+    statusRescheduled: "Rescheduled",
+    rejectedLabel: "Rejected",
+    rescheduledLabel: "Rescheduled"
   },
   es: {
     title: "Pedido Especial", subtitle: "Solicitud a Produccion",
@@ -862,7 +951,17 @@ var LANG = {
     reviewSubtitle: "Revise su pedido antes de enviar",
     reviewConfirm: "Confirmar y Enviar Pedido",
     reviewEdit: "Regresar y Editar",
-    reviewBack: "Editar"
+    reviewBack: "Editar",
+    rejectBtn: "Rechazar",
+    rescheduleBtn: "Reprogramar",
+    rejectReason: "Razon del rechazo:",
+    rejectConfirm: "Confirmar Rechazo",
+    rescheduleDate: "Nueva fecha:",
+    rescheduleConfirm: "Confirmar",
+    statusRejected: "Rechazado",
+    statusRescheduled: "Reprogramado",
+    rejectedLabel: "Rechazado",
+    rescheduledLabel: "Reprogramado"
   }
 };
 
@@ -1310,23 +1409,49 @@ function loadPending() {
         return;
       }
 
-      // Sort newest first, show pending ones on top
-      data.orders.sort(function(a, b) {
-        var aP = (a.status || "").toLowerCase() === "pendiente" ? 0 : 1;
-        var bP = (b.status || "").toLowerCase() === "pendiente" ? 0 : 1;
+      // Filter: only show pending orders, plus recently actioned (last 24hrs)
+      var now = new Date();
+      var oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+      var filtered = data.orders.filter(function(order) {
+        var rawStatus = (order.status || "").toLowerCase().trim();
+        if (rawStatus === "pendiente" || rawStatus === "") return true;
+        // Show confirmed/rejected/rescheduled only if recent
+        var orderTime = new Date(order.timestamp);
+        return orderTime >= oneDayAgo;
+      });
+
+      if (filtered.length === 0) {
+        content.innerHTML = '<div class="status-empty">' + t("managerEmpty") + '</div>';
+        return;
+      }
+
+      // Sort: pending first, then by date
+      filtered.sort(function(a, b) {
+        var aP = (a.status || "").toLowerCase() === "pendiente" || a.status === "" ? 0 : 1;
+        var bP = (b.status || "").toLowerCase() === "pendiente" || b.status === "" ? 0 : 1;
         if (aP !== bP) return aP - bP;
         return new Date(b.timestamp) - new Date(a.timestamp);
       });
 
       var html = "";
-      data.orders.forEach(function(order) {
+      filtered.forEach(function(order) {
         var statusText = t("statusPending");
         var statusClass = "pending";
         var isPending = true;
         var rawStatus = (order.status || "").toLowerCase().trim();
+
         if (rawStatus === "confirmado" || rawStatus === "confirmed") {
           statusText = t("statusConfirmed");
           statusClass = "confirmed";
+          isPending = false;
+        } else if (rawStatus.indexOf("rechazado") >= 0 || rawStatus.indexOf("rejected") >= 0) {
+          statusText = t("statusRejected");
+          statusClass = "rejected";
+          isPending = false;
+        } else if (rawStatus.indexOf("reprogramado") >= 0 || rawStatus.indexOf("rescheduled") >= 0) {
+          statusText = t("statusRescheduled");
+          statusClass = "rescheduled";
           isPending = false;
         }
 
@@ -1346,9 +1471,28 @@ function loadPending() {
         }
 
         if (isPending) {
-          html += '<button class="confirm-btn" id="cbtn-' + order.orderId + '" onclick="confirmOrder(\'' + order.orderId + '\')">' + t("confirmBtn") + '</button>';
-        } else {
-          html += '<div class="confirmed-label">' + t("confirmed") + '</div>';
+          html +=
+            '<button class="confirm-btn" id="cbtn-' + order.orderId + '" onclick="confirmOrder(\'' + order.orderId + '\')">' + t("confirmBtn") + '</button>' +
+            '<div class="action-btns">' +
+              '<button class="reject-btn" id="rbtn-' + order.orderId + '" onclick="showRejectInput(\'' + order.orderId + '\')">' + t("rejectBtn") + '</button>' +
+              '<button class="reschedule-btn" id="sbtn-' + order.orderId + '" onclick="showRescheduleInput(\'' + order.orderId + '\')" style="margin-top:0">' + t("rescheduleBtn") + '</button>' +
+            '</div>' +
+            '<div class="hidden" id="reject-input-' + order.orderId + '" style="margin-top:8px">' +
+              '<input type="text" id="reject-reason-' + order.orderId + '" placeholder="' + t("rejectReason") + '" style="margin-bottom:8px;font-size:14px;padding:10px 12px">' +
+              '<button class="reject-btn" style="width:100%" onclick="rejectOrder(\'' + order.orderId + '\')">' + t("rejectConfirm") + '</button>' +
+            '</div>' +
+            '<div class="hidden" id="reschedule-input-' + order.orderId + '">' +
+              '<div class="reschedule-input">' +
+                '<input type="date" id="reschedule-date-' + order.orderId + '">' +
+                '<button onclick="rescheduleOrder(\'' + order.orderId + '\')">' + t("rescheduleConfirm") + '</button>' +
+              '</div>' +
+            '</div>';
+        } else if (rawStatus.indexOf("rechazado") >= 0 || rawStatus.indexOf("rejected") >= 0) {
+          var reason = order.status.replace(/rechazado:?\s*/i, "").replace(/rejected:?\s*/i, "");
+          if (reason) html += '<div class="status-reason">' + reason + '</div>';
+        } else if (rawStatus.indexOf("reprogramado") >= 0 || rawStatus.indexOf("rescheduled") >= 0) {
+          var newDate = order.status.replace(/reprogramado:?\s*/i, "").replace(/rescheduled:?\s*/i, "");
+          if (newDate) html += '<div class="status-reason">Nueva fecha: ' + newDate + '</div>';
         }
 
         html += '</div>';
@@ -1375,19 +1519,57 @@ function confirmOrder(orderId) {
     body: JSON.stringify({ action: "confirm", orderId: orderId })
   })
   .then(function() {
-    if (btn) {
-      btn.textContent = t("confirmed");
-      btn.style.background = "var(--greenBg)";
-      btn.style.color = "var(--green)";
-      btn.style.border = "1px solid rgba(52,211,153,0.2)";
-    }
     showToast(t("confirmed") + " " + orderId);
+    setTimeout(function() { loadPending(); }, 1000);
   })
   .catch(function() {
     if (btn) {
       btn.textContent = "Error";
       btn.disabled = false;
     }
+  });
+}
+
+function showRejectInput(orderId) {
+  document.getElementById("reject-input-" + orderId).classList.remove("hidden");
+  document.getElementById("reschedule-input-" + orderId).classList.add("hidden");
+}
+
+function showRescheduleInput(orderId) {
+  document.getElementById("reschedule-input-" + orderId).classList.remove("hidden");
+  document.getElementById("reject-input-" + orderId).classList.add("hidden");
+}
+
+function rejectOrder(orderId) {
+  var reason = document.getElementById("reject-reason-" + orderId).value.trim();
+  var statusValue = "Rechazado" + (reason ? ": " + reason : "");
+
+  fetch(SCRIPT_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify({ action: "updateStatus", orderId: orderId, status: statusValue })
+  })
+  .then(function() {
+    showToast(t("statusRejected") + " " + orderId);
+    setTimeout(function() { loadPending(); }, 1000);
+  });
+}
+
+function rescheduleOrder(orderId) {
+  var newDate = document.getElementById("reschedule-date-" + orderId).value;
+  if (!newDate) return;
+  var statusValue = "Reprogramado: " + formatDateSpanish(newDate);
+
+  fetch(SCRIPT_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify({ action: "updateStatus", orderId: orderId, status: statusValue })
+  })
+  .then(function() {
+    showToast(t("statusRescheduled") + " " + orderId);
+    setTimeout(function() { loadPending(); }, 1000);
   });
 }
 
@@ -1432,6 +1614,12 @@ function loadStatus() {
         if (rawStatus === "confirmado" || rawStatus === "confirmed") {
           statusText = t("statusConfirmed");
           statusClass = "confirmed";
+        } else if (rawStatus.indexOf("rechazado") >= 0 || rawStatus.indexOf("rejected") >= 0) {
+          statusText = t("statusRejected");
+          statusClass = "rejected";
+        } else if (rawStatus.indexOf("reprogramado") >= 0 || rawStatus.indexOf("rescheduled") >= 0) {
+          statusText = t("statusRescheduled");
+          statusClass = "rescheduled";
         }
 
         html +=
@@ -1443,8 +1631,17 @@ function loadStatus() {
             '<div class="status-card-detail"><strong>' + t("driver") + ':</strong> ' + order.driver + '</div>' +
             '<div class="status-card-detail"><strong>' + t("statusDelivery") + ':</strong> ' + order.date + '</div>' +
             '<div class="status-card-detail"><strong>' + t("product") + ':</strong> ' + order.products + '</div>' +
-            '<div class="status-card-detail"><strong>' + t("cases") + ':</strong> ' + order.quantities + '</div>' +
-          '</div>';
+            '<div class="status-card-detail"><strong>' + t("cases") + ':</strong> ' + order.quantities + '</div>';
+
+        if (rawStatus.indexOf("rechazado") >= 0 || rawStatus.indexOf("rejected") >= 0) {
+          var reason = order.status.replace(/rechazado:?\s*/i, "").replace(/rejected:?\s*/i, "");
+          if (reason) html += '<div class="status-reason">' + reason + '</div>';
+        } else if (rawStatus.indexOf("reprogramado") >= 0 || rawStatus.indexOf("rescheduled") >= 0) {
+          var newDate = order.status.replace(/reprogramado:?\s*/i, "").replace(/rescheduled:?\s*/i, "");
+          if (newDate) html += '<div class="status-reason">Nueva fecha: ' + newDate + '</div>';
+        }
+
+        html += '</div>';
       });
 
       content.innerHTML = html;
