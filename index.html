@@ -921,6 +921,11 @@ var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwwUAiVi7xPUnulUERNCKp
 var MANAGER_PIN = "1234";
 
 // ============================================================
+// SECRET KEY - Must match the key in your Apps Script
+// ============================================================
+var SECRET_KEY = "PE2026ORDEN";
+
+// ============================================================
 // PRODUCTS - To add/remove/edit products, just edit this list
 // ============================================================
 var PRODUCTS = [
@@ -1408,6 +1413,9 @@ function handleSubmit() {
 
   lastSubmitted = orderData;
 
+  // Add secret key for authentication
+  orderData.key = SECRET_KEY;
+
   // Show review screen with preview of what the text will look like
   var unit = t("casesUnit");
   var reviewHtml =
@@ -1665,7 +1673,7 @@ function confirmOrder(orderId) {
     method: "POST",
     mode: "no-cors",
     headers: { "Content-Type": "text/plain" },
-    body: JSON.stringify({ action: "confirm", orderId: orderId })
+    body: JSON.stringify({ action: "confirm", orderId: orderId, key: SECRET_KEY })
   })
   .then(function() {
     if (btn) {
@@ -1710,7 +1718,7 @@ function rejectOrder(orderId) {
     method: "POST",
     mode: "no-cors",
     headers: { "Content-Type": "text/plain" },
-    body: JSON.stringify({ action: "updateStatus", orderId: orderId, status: statusValue })
+    body: JSON.stringify({ action: "updateStatus", orderId: orderId, status: statusValue, key: SECRET_KEY })
   })
   .then(function() {
     showToast(t("statusRejected") + " " + orderId);
@@ -1732,7 +1740,7 @@ function rescheduleOrder(orderId) {
     method: "POST",
     mode: "no-cors",
     headers: { "Content-Type": "text/plain" },
-    body: JSON.stringify({ action: "updateStatus", orderId: orderId, status: statusValue })
+    body: JSON.stringify({ action: "updateStatus", orderId: orderId, status: statusValue, key: SECRET_KEY })
   })
   .then(function() {
     showToast(t("statusRescheduled") + " " + orderId);
