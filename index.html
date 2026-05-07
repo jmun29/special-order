@@ -8,6 +8,12 @@
 <meta name="theme-color" content="#FF6B35">
 <title>Pedido Especial</title>
 <link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -667,6 +673,16 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
     </div>
   </div>
 
+  <!-- REVIEW SCREEN (before sending) -->
+  <div class="status-screen hidden" id="reviewScreen">
+    <button class="status-back-btn" onclick="cancelReview()">&#8592; <span id="reviewBackText">Editar</span></button>
+    <h2 id="reviewTitle">Revisar Pedido</h2>
+    <p style="color:var(--text2);font-size:13px;margin-bottom:16px" id="reviewSubtitle">Revise su pedido antes de enviar</p>
+    <div class="status-card" id="reviewCard"></div>
+    <button class="submit-btn" id="reviewConfirmBtn" onclick="confirmAndSend()" style="margin-top:16px"></button>
+    <button class="status-btn" id="reviewEditBtn" onclick="cancelReview()" style="margin-top:8px"></button>
+  </div>
+
   <!-- SUCCESS SCREEN -->
   <div class="success-screen hidden" id="successScreen">
     <div class="success-icon">
@@ -794,7 +810,12 @@ var LANG = {
     confirmBtn: "Confirm This Order",
     confirming: "Confirming...",
     confirmed: "Confirmed!",
-    managerRefresh: "Refresh"
+    managerRefresh: "Refresh",
+    reviewTitle: "Review Order",
+    reviewSubtitle: "Review your order before sending",
+    reviewConfirm: "Confirm & Send Order",
+    reviewEdit: "Go Back & Edit",
+    reviewBack: "Edit"
   },
   es: {
     title: "Pedido Especial", subtitle: "Solicitud a Produccion",
@@ -836,7 +857,12 @@ var LANG = {
     confirmBtn: "Confirmar Este Pedido",
     confirming: "Confirmando...",
     confirmed: "Confirmado!",
-    managerRefresh: "Actualizar"
+    managerRefresh: "Actualizar",
+    reviewTitle: "Revisar Pedido",
+    reviewSubtitle: "Revise su pedido antes de enviar",
+    reviewConfirm: "Confirmar y Enviar Pedido",
+    reviewEdit: "Regresar y Editar",
+    reviewBack: "Editar"
   }
 };
 
@@ -912,6 +938,11 @@ function updateLangUI() {
   document.getElementById("managerTitle").textContent = t("managerTitle");
   document.getElementById("managerBackText").textContent = t("back");
   document.getElementById("managerRefreshBtn").textContent = t("managerRefresh");
+  document.getElementById("reviewTitle").textContent = t("reviewTitle");
+  document.getElementById("reviewSubtitle").textContent = t("reviewSubtitle");
+  document.getElementById("reviewConfirmBtn").textContent = t("reviewConfirm");
+  document.getElementById("reviewEditBtn").textContent = t("reviewEdit");
+  document.getElementById("reviewBackText").textContent = t("reviewBack");
   updateNotesLabel();
   updateConnection();
   updatePending();
@@ -1074,6 +1105,16 @@ function validate() {
   return true;
 }
 
+function formatDateSpanish(dateStr) {
+  var months = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
+                "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  var parts = dateStr.split("-");
+  var year = parts[0];
+  var month = parseInt(parts[1], 10) - 1;
+  var day = parseInt(parts[2], 10);
+  return months[month] + " " + day + ", " + year;
+}
+
 function handleSubmit() {
   var errEl = document.getElementById("errorMsg");
   errEl.classList.add("hidden");
@@ -1084,11 +1125,7 @@ function handleSubmit() {
     return;
   }
 
-  if (submitting) return;
-  submitting = true;
-  document.getElementById("submitBtn").textContent = t("sending");
-  document.getElementById("submitBtn").disabled = true;
-
+  // Build order data for review
   var oid = genOrderId();
   lastOrderId = oid;
 
@@ -1109,7 +1146,6 @@ function handleSubmit() {
     timestamp: new Date().toISOString()
   };
 
-  // Detect product categories for text routing
   var hasHarinaBurrito = false;
   var hasTortilla = false;
   var HB_IDS = ["HA45","HA55","HA06","HA12","BU10","BU12","BU13","BU3.5","BU14","BU16","BU08","OTHER_HB"];
@@ -1124,6 +1160,53 @@ function handleSubmit() {
   orderData.hasTortilla = hasTortilla;
 
   lastSubmitted = orderData;
+
+  // Show review screen with preview of what the text will look like
+  var unit = t("casesUnit");
+  var reviewHtml =
+    '<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;font-family:var(--mono);font-size:13px;line-height:1.8;color:var(--text);white-space:pre-wrap">' +
+    'ORDEN ESPECIAL ' + orderData.orderId + '\n' +
+    'Ruta: ' + orderData.route + '\n' +
+    'Chofer: ' + orderData.driver + '\n' +
+    'Entrega: ' + formatDateSpanish(orderData.date) + '\n';
+
+  orderData.items.forEach(function(it) {
+    reviewHtml += it.productName + ': ' + it.qty + ' ' + unit + '\n';
+  });
+
+  if (orderData.notes) {
+    reviewHtml += 'Notas: ' + orderData.notes + '\n';
+  }
+
+  reviewHtml += '</div>';
+
+  // Add summary details
+  reviewHtml +=
+    '<div class="summary-row"><span class="label">' + t("route") + '</span><span class="value">' + orderData.route + '</span></div>' +
+    '<div class="summary-row"><span class="label">' + t("driver") + '</span><span class="value">' + orderData.driver + '</span></div>' +
+    '<div class="summary-row"><span class="label">' + t("date") + '</span><span class="value">' + formatDateSpanish(orderData.date) + '</span></div>';
+
+  reviewHtml += '<div class="summary-items">';
+  orderData.items.forEach(function(it) {
+    reviewHtml += '<div class="summary-item"><span class="name">' + it.productName + '</span><span class="qty">&times;' + it.qty + ' ' + unit + '</span></div>';
+  });
+  reviewHtml += '</div>';
+
+  if (orderData.notes) {
+    reviewHtml += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:13px;color:var(--text2)"><strong>Notas:</strong> ' + orderData.notes + '</div>';
+  }
+
+  document.getElementById("reviewCard").innerHTML = reviewHtml;
+  showScreen("review");
+}
+
+function confirmAndSend() {
+  if (submitting) return;
+  submitting = true;
+  document.getElementById("reviewConfirmBtn").textContent = t("sending");
+  document.getElementById("reviewConfirmBtn").disabled = true;
+
+  var orderData = lastSubmitted;
 
   if (!isOnline) {
     submitting = false;
@@ -1142,16 +1225,25 @@ function handleSubmit() {
   })
   .then(function() {
     submitting = false;
+    document.getElementById("reviewConfirmBtn").disabled = false;
+    document.getElementById("reviewConfirmBtn").textContent = t("reviewConfirm");
     showScreen("success");
     showOrderDetails("success");
   })
   .catch(function() {
     submitting = false;
+    document.getElementById("reviewConfirmBtn").disabled = false;
+    document.getElementById("reviewConfirmBtn").textContent = t("reviewConfirm");
     queue.push(orderData);
     updatePending();
     showScreen("offline");
     showOrderDetails("offline");
   });
+}
+
+function cancelReview() {
+  submitting = false;
+  showScreen("form");
 }
 
 // ============================================================
@@ -1182,6 +1274,7 @@ function showScreen(name) {
   document.getElementById("offlineScreen").classList.add("hidden");
   document.getElementById("statusScreen").classList.add("hidden");
   document.getElementById("managerScreen").classList.add("hidden");
+  document.getElementById("reviewScreen").classList.add("hidden");
 
   if (name === "form") {
     document.getElementById("formScreen").classList.remove("hidden");
@@ -1193,6 +1286,8 @@ function showScreen(name) {
     document.getElementById("statusScreen").classList.remove("hidden");
   } else if (name === "manager") {
     document.getElementById("managerScreen").classList.remove("hidden");
+  } else if (name === "review") {
+    document.getElementById("reviewScreen").classList.remove("hidden");
   }
 }
 
